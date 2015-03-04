@@ -50,6 +50,19 @@ function Lcd(config) {
   this.displayControl = 0x0c; // display on, cursor off, cursor blink off
   this.displayMode = 0x06; // left to right, no shift
 
+  //if there's a backlight option
+  if(config.backlight){
+    if(config.backlight.red){
+      this.backlightRedPin = config.backlight.red;
+      this.backlightGreenPin = config.backlight.green;
+      this.backlightBluePin = config.backlight.blue;
+    } else {
+      this.backlightPin = config.backlight.pin;
+    }
+
+    this.backlightPWM = config.backlight.pwm;
+  }
+
   this.init();
 }
 
@@ -84,7 +97,16 @@ Lcd.prototype.init = function () {
 
     this._command(0x01); // clear display (don't call clear to avoid event)
   }.bind(this))
-  .delay(3)             // wait > 1.52ms for display to clear
+  .delay(3)   
+  .then(function(){
+    if(this.backlightRedPin){
+      this.backlightRed = new Gpio(this.backlightRedPin, 'out');
+      this.backlightGreen = new Gpio(this.backlightGreenPin, 'out');
+      this.backlightBlue = new Gpio(this.backlightBluePin, 'out');
+    } else {
+      this.backlight = new Gpio(this.backlightPin, 'out'); 
+    }
+  }.bind(this))          // wait > 1.52ms for display to clear
   .then(function () { this.emit('ready'); }.bind(this));
 };
 
@@ -209,6 +231,16 @@ Lcd.prototype.close = function () {
 
   for (i = 0; i < this.data.length; i += 1) {
     this.data[i].unexport();
+  }
+};
+
+Lcd.prototype.setBacklight = function(values){
+  if(this.backlightRed){
+    this.backlightRed.write(values.red);
+    this.backlightGreen.write(values.green);
+    this.backlightBlue.write(values.blue);
+  } else {
+    this.backlight.write(values);
   }
 };
 
